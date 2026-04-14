@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="description" content="Minimalist Progressive Web App Workout Timer">
+    
+    <title>Pulse | Workout Timer</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/style.css">
+    <script>
+        // Check for saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    </script>
+</head>
+<body>
+    <div id="app" class="app-container">
+        
+        <!-- Screen 1: Home Screen (User Selection) -->
+        <main id="home-screen" class="screen active">
+            <header class="app-header">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <div class="brand">
+                            <div class="brand-icon"></div>
+                            <h1>Pulse</h1>
+                        </div>
+                        <p class="subtitle">Select a profile to begin</p>
+                    </div>
+                    <button id="theme-toggle" class="icon-btn glass-icon" aria-label="Toggle Theme">
+                        <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                        <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    </button>
+                </div>
+            </header>
+            
+            <div id="user-list" class="user-grid">
+                <!-- User tiles injected here -->
+                <div class="loading-pulse"></div>
+            </div>
+            
+            <div class="bottom-action">
+                <button id="add-user-btn" class="btn primary-btn glass-btn">
+                    <span class="icon">+</span> Add New User
+                </button>
+            </div>
+            
+            <!-- Modal for adding user -->
+            <div id="add-user-modal" class="modal hidden">
+                <div class="modal-backdrop"></div>
+                <div class="modal-content glass-panel">
+                    <h2>New Profile</h2>
+                    <input type="text" id="new-username" placeholder="Enter name" autocomplete="off">
+                    <div class="modal-actions">
+                        <button id="cancel-user-btn" class="btn secondary-btn ghost">Cancel</button>
+                        <button id="save-user-btn" class="btn primary-btn">Save Profile</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Screen 2: Timer Screen -->
+        <main id="timer-screen" class="screen hidden">
+            <header class="app-header nav-header">
+                <button id="back-to-home" class="icon-btn glass-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <div class="user-badge glass-panel">
+                    <div class="avatar-mini"></div>
+                    <span id="current-user-name">User</span>
+                </div>
+                <div style="width: 44px"></div> <!-- spacer for balance -->
+            </header>
+            
+            <div class="timer-container">
+                <div class="timer-ring">
+                    <svg class="ring-svg" viewBox="0 0 100 100">
+                        <circle class="ring-bg" cx="50" cy="50" r="45"></circle>
+                        <circle class="ring-progress" cx="50" cy="50" r="45" id="timer-ring-path"></circle>
+                    </svg>
+                    <div class="timer-display">
+                        <div id="time-display">00:00:00</div>
+                        <div id="status-indicator">Ready to track</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls-container">
+                <div class="controls glass-panel">
+                    <button id="start-btn" class="circular-btn play-btn">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button id="pause-btn" class="circular-btn pause-btn hidden">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                    <button id="resume-btn" class="circular-btn play-btn hidden">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button id="stop-btn" class="circular-btn stop-btn">
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h12v12H6z"/></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bottom-action">
+                <button id="explore-data-btn" class="btn secondary-btn ghost glass-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    Explore Data
+                </button>
+            </div>
+            
+            <!-- Stop Confirmation Modal -->
+            <div id="stop-modal" class="modal hidden">
+                <div class="modal-backdrop"></div>
+                <div class="modal-content glass-panel glow-danger">
+                    <div class="modal-icon danger">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    </div>
+                    <h2>End Workout?</h2>
+                    <p>Great job! Are you sure you want to stop and save this session?</p>
+                    <div class="modal-actions">
+                        <button id="cancel-stop-btn" class="btn secondary-btn ghost">Cancel</button>
+                        <button id="confirm-stop-btn" class="btn danger-btn">End & Save</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Screen 3: Explore Screen -->
+        <main id="explore-screen" class="screen hidden">
+            <header class="app-header nav-header">
+                <button id="back-to-timer" class="icon-btn glass-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h1>Workout History</h1>
+                <div style="width: 44px"></div>
+            </header>
+            
+            <div id="stats-summary" class="stats-summary glass-panel hidden">
+                <div class="stat-box">
+                    <span class="stat-label">Total Workouts</span>
+                    <span id="stat-total-count" class="stat-value">0</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-box">
+                    <span class="stat-label">Total Time</span>
+                    <span id="stat-total-time" class="stat-value">0h</span>
+                </div>
+            </div>
+            
+            <div id="workout-list" class="workout-list">
+                <!-- Workout items injected here -->
+                <div class="loading-pulse"></div>
+            </div>
+        </main>
+        
+        <!-- Global Toast Notification -->
+        <div id="toast" class="toast hidden">
+            <span id="toast-message">Notification</span>
+        </div>
+        
+    </div>
+    
+    <script src="/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').then(reg => {
+                    console.log('Service Worker registered', reg);
+                }).catch(err => {
+                    console.warn('Service Worker not registered', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
