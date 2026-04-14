@@ -11,37 +11,53 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Use async IIFE to start server
-(async () => {
+// Serverless MongoDB Connection Handler
+let isConnected = false;
+const connectDB = async () => {
+    if (isConnected) return;
     try {
-        console.log('Connecting to database...');
         await mongoose.connect(process.env.MONGODB_URI, {
-            serverSelectionTimeoutMS: 5000,
-            connectTimeoutMS: 10000,
-            socketTimeoutMS: 45000
+            serverSelectionTimeoutMS: 8000,
+            socketTimeoutMS: 45000,
         });
-        console.log('Connected to MongoDB Atlas successfully!');
-        
-        const UserSchema = new mongoose.Schema({
-            username: { type: String, required: true },
-        });
-        const User = mongoose.model('User', UserSchema);
+        isConnected = true;
+        console.log('MongoDB Connected successfully!');
+    } catch (err) {
+        console.error('MongoDB connection error:', err);
+        throw err;
+    }
+};
 
-        const WorkoutSchema = new mongoose.Schema({
-            userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-            date: { type: Date, required: true },
-            startTime: { type: String, required: true },
-            endTime: { type: String, required: true },
-            totalDuration: { type: Number, required: true },
-        });
-        const Workout = mongoose.model('Workout', WorkoutSchema);
+// Vercel Serverless Middleware: Guarantees connection before any route is processed
+app.use('/api', async (req, res, next) => {
+    try {
+        await connectDB();
+        next();
+    } catch (e) {
+        return res.status(500).json({ error: 'Database connection failed. Check Vercel Environment Variables.' });
+    }
+});
+
+// Use Vercel Cache Pattern to prevent OverwriteModelError on cold starts
+const UserSchema = new mongoose.Schema({
+    username: { type: String, required: true },
+});
+const User = mongoose.models.User || mongoose.model('User', UserSchema);
+
+const WorkoutSchema = new mongoose.Schema({
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    date: { type: Date, required: true },
+    startTime: { type: String, required: true },
+    endTime: { type: String, required: true },
+    totalDuration: { type: Number, required: true },
+});
+const Workout = mongoose.models.Workout || mongoose.model('Workout', WorkoutSchema);
 
 app.get('/api/users', async (req, res) => {
     try {
         const users = await User.find();
         res.json(users);
     } catch (err) {
-        console.error('API Error:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
@@ -89,15 +105,11 @@ app.use((req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-        if (require.main === module) {
-            app.listen(PORT, () => {
-                console.log(`Server running on http://localhost:${PORT}`);
-            });
-        }
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running on http://localhost:${PORT}`);
+    });
+}
 
-    } catch (e) {
-        console.error('Fatal server startup error:', e);
-    }
-})();
 
 module.exports = app;
