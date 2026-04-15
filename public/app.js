@@ -1,7 +1,6 @@
 // Configuration
 const API_URL = '/api';
 
-// State
 const state = {
     users: [],
     currentUser: null,
@@ -9,6 +8,8 @@ const state = {
     timer: {
         interval: null,
         startTime: null,
+        elapsedAtPause: 0,
+        referenceTime: 0,
         elapsedSeconds: 0,
         isRunning: false,
         isPaused: false
@@ -135,6 +136,57 @@ const init = async () => {
     initThemeState();
     bindEvents();
     await loadUsers();
+    resumeFromStorage();
+};
+
+const saveActiveWorkoutState = () => {
+    if (!state.currentUser || (!state.timer.isRunning && !state.timer.isPaused)) {
+        localStorage.removeItem('activeWorkout');
+        return;
+    }
+    const payload = {
+        userId: state.currentUser._id,
+        startTime: state.timer.startTime,
+        elapsedAtPause: state.timer.elapsedAtPause,
+        referenceTime: state.timer.referenceTime,
+        isRunning: state.timer.isRunning,
+        isPaused: state.timer.isPaused
+    };
+    localStorage.setItem('activeWorkout', JSON.stringify(payload));
+};
+
+const resumeFromStorage = () => {
+    const data = localStorage.getItem('activeWorkout');
+    if (!data) return;
+    try {
+        const payload = JSON.parse(data);
+        const user = state.users.find(u => u._id === payload.userId);
+        if (!user) return;
+        
+        state.currentUser = user;
+        els.timer.userName.textContent = state.currentUser.username;
+        showScreen('timer');
+        
+        state.timer.startTime = new Date(payload.startTime);
+        state.timer.elapsedAtPause = payload.elapsedAtPause || 0;
+        state.timer.referenceTime = payload.referenceTime || Date.now();
+        state.timer.isRunning = payload.isRunning;
+        state.timer.isPaused = payload.isPaused;
+        
+        if (state.timer.isRunning && !state.timer.isPaused) {
+            const diffSeconds = Math.floor((Date.now() - state.timer.referenceTime) / 1000);
+            state.timer.elapsedSeconds = state.timer.elapsedAtPause + diffSeconds;
+            state.timer.interval = setInterval(runTimerLoop, 1000);
+        } else {
+            state.timer.elapsedSeconds = state.timer.elapsedAtPause;
+        }
+        
+        updateTimerDisplay();
+        updateTimerUI();
+    } catch(e) {
+        console.error('State restore error:', e);
+        localStorage.removeItem('activeWorkout');
+    }
 };
 
 const initThemeState = () => {
@@ -193,7 +245,10 @@ const selectUser = (userId) => {
 
 // Timer Logic
 const runTimerLoop = () => {
-    state.timer.elapsedSeconds++;
+    if (state.timer.isRunning && !state.timer.isPaused) {
+        const diffSeconds = Math.floor((Date.now() - state.timer.referenceTime) / 1000);
+        state.timer.elapsedSeconds = state.timer.elapsedAtPause + diffSeconds;
+    }
     updateTimerDisplay();
 };
 
@@ -207,6 +262,8 @@ const updateTimerDisplay = () => {
 const resetTimer = () => {
     clearInterval(state.timer.interval);
     state.timer.elapsedSeconds = 0;
+    state.timer.elapsedAtPause = 0;
+    state.timer.referenceTime = 0;
     state.timer.isRunning = false;
     state.timer.isPaused = false;
     state.timer.startTime = null;
@@ -214,6 +271,7 @@ const resetTimer = () => {
     updateTimerDisplay();
     updateTimerUI();
     document.querySelector('.timer-ring').classList.remove('is-active', 'is-paused');
+    saveActiveWorkoutState();
 };
 
 const updateTimerUI = () => {
@@ -303,20 +361,27 @@ const bindEvents = () => {
     els.timer.startBtn.addEventListener('click', () => {
         state.timer.isRunning = true;
         state.timer.startTime = new Date();
+        state.timer.elapsedAtPause = 0;
+        state.timer.referenceTime = Date.now();
         state.timer.interval = setInterval(runTimerLoop, 1000);
         updateTimerUI();
+        saveActiveWorkoutState();
     });
     
     els.timer.pauseBtn.addEventListener('click', () => {
         state.timer.isPaused = true;
+        state.timer.elapsedAtPause = state.timer.elapsedSeconds;
         clearInterval(state.timer.interval);
         updateTimerUI();
+        saveActiveWorkoutState();
     });
     
     els.timer.resumeBtn.addEventListener('click', () => {
         state.timer.isPaused = false;
+        state.timer.referenceTime = Date.now();
         state.timer.interval = setInterval(runTimerLoop, 1000);
         updateTimerUI();
+        saveActiveWorkoutState();
     });
     
     els.timer.stopBtn.addEventListener('click', () => {
