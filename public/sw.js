@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pulse-workout-v2';
+const CACHE_NAME = 'pulse-workout-v3';
 const urlsToCache = [
   '/',
   '/index.html',

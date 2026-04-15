@@ -384,6 +384,26 @@ const bindEvents = () => {
         saveActiveWorkoutState();
     });
     
+    // IMMUNE TO IOS BACKGROUND SLEEP
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            // App woke up! 
+            if (state.timer.isRunning && !state.timer.isPaused) {
+                // Instantly update the math to cover all the time missed while asleep
+                const diffSeconds = Math.floor((Date.now() - state.timer.referenceTime) / 1000);
+                state.timer.elapsedSeconds = state.timer.elapsedAtPause + diffSeconds;
+                updateTimerDisplay();
+                
+                // Jump-start the engine (iOS frequently deletes intervals in the background)
+                clearInterval(state.timer.interval);
+                state.timer.interval = setInterval(runTimerLoop, 1000);
+            }
+        } else {
+            // App is going to sleep, defensively save
+            saveActiveWorkoutState();
+        }
+    });
+
     els.timer.stopBtn.addEventListener('click', () => {
         els.timer.modal.classList.remove('hidden');
     });
