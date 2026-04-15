@@ -396,6 +396,12 @@ const bindEvents = () => {
         clearInterval(state.timer.interval);
         els.timer.modal.classList.add('hidden');
         
+        // Strict Mathematical Validation against system time overrides any interval lag
+        if (state.timer.isRunning && !state.timer.isPaused) {
+            const diffSeconds = Math.floor((Date.now() - state.timer.referenceTime) / 1000);
+            state.timer.elapsedSeconds = state.timer.elapsedAtPause + diffSeconds;
+        }
+        
         // Save logic
         const endTime = new Date();
         const startStr = state.timer.startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
